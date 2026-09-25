@@ -1,5 +1,9 @@
 Pages.project = async (el, id) => {
   let project, labs, files
+  // Last visit before this one; files uploaded by others after it are shown as new.
+  const seenBefore = (await loadProjectViews()).get(id)
+  markProjectSeen(id).catch(() => {})
+  const filesOf = (pred) => files.filter(pred)
 
   async function load() {
     ;[project, labs, files] = await Promise.all([
@@ -25,7 +29,8 @@ Pages.project = async (el, id) => {
       <a href="#/projects" class="back">→ חזרה לפרויקטים</a>
       <div class="page-head">
         <div><h1><span class="mono">${esc(p.project_number)}</span> · ${esc(p.name ?? '')}</h1>
-          <p class="subtitle">לקוח: <a href="#/client/${p.client.id}">${esc(p.client.name)}</a> · נפתח ${fmtDate(p.created_at)}</p></div>
+          <p class="subtitle">לקוח: <a href="#/client/${p.client.id}">${esc(p.client.name)}</a> · נפתח ${fmtDate(p.created_at)}
+            · <button type="button" class="files-link" data-action="goto-files">${fileBadge(files, seenBefore).replace('<span class="muted">—</span>', 'אין קבצים')}</button></p></div>
         <button class="btn ghost staff-only" data-action="edit-project">עריכת פרויקט</button>
       </div>
 
@@ -45,7 +50,7 @@ Pages.project = async (el, id) => {
       </section>
 
       <section class="card">
-        <div class="section-head"><h2>קבצים</h2></div>
+        <div class="section-head" id="files-section"><h2>קבצים</h2>${fileBadge(files, seenBefore)}</div>
         ${renderUpload(p)}
         ${files.length === 0 ? '<p class="empty">לא הועלו קבצים</p>' : Object.entries(STORAGE_AREAS).map(([bucket, label]) => {
           const inArea = files.filter((f) => (f.bucket ?? 'lab-files') === bucket)
@@ -53,9 +58,9 @@ Pages.project = async (el, id) => {
           return `<h3 class="files-area">${esc(label)} <span class="muted">(${inArea.length})</span></h3>
           <div class="table-wrap"><table>
             <thead><tr><th>סוג</th><th>שם הקובץ</th><th>שיוך</th><th>גודל</th><th>הועלה</th><th></th></tr></thead>
-            <tbody>${inArea.map((f) => `<tr>
+            <tbody>${inArea.map((f) => `<tr class="${isNewFile(f, seenBefore) ? 'is-new' : ''}">
               <td><span class="badge badge-file">${esc(FILE_TYPE[f.file_type] ?? f.file_type)}</span></td>
-              <td class="ltr">${esc(f.file_name)}</td>
+              <td class="ltr">${esc(f.file_name)}${isNewFile(f, seenBefore) ? ' <span class="badge badge-new">חדש</span>' : ''}</td>
               <td>${linkLabel(f)}</td>
               <td>${fmtSize(f.size_bytes)}</td>
               <td class="muted">${fmtDate(f.created_at)}${f.uploaded_by === Profile.id ? ' · שלך' : ''}</td>
@@ -108,6 +113,11 @@ Pages.project = async (el, id) => {
         <h3 class="mono">${esc(r.request_number)}</h3>
         ${rep ? badge(rep.status, REPORT_STATUS) : ''}
         ${rep ? progress(rep.completed_tests, rep.total_tests) : ''}
+        ${(() => {
+          const testIds = new Set(r.tests.map((t) => t.id))
+          const reqFiles = filesOf((f) => f.test_request_id === r.id || testIds.has(f.test_id))
+          return reqFiles.length ? `<button type="button" class="files-link" data-action="goto-files">${fileBadge(reqFiles, seenBefore)}</button>` : ''
+        })()}
         <span class="spacer"></span>
         <button class="btn link staff-only" data-action="edit-request" data-id="${r.id}">עריכה</button>
         <button class="btn ghost small staff-only" data-action="new-test" data-id="${r.id}">+ בדיקה</button>
@@ -128,7 +138,10 @@ Pages.project = async (el, id) => {
           <td>${canEditTest(t)
             ? `<select class="inline" data-status="${t.id}" aria-label="סטטוס בדיקה">${options(Object.entries(TEST_STATUS), t.status)}</select>`
             : badge(t.status, TEST_STATUS)}</td>
-          <td>${val(t.result_notes)}</td>
+          <td>${val(t.result_notes)}${(() => {
+            const tf = filesOf((f) => f.test_id === t.id)
+            return tf.length ? ` <button type="button" class="files-link" data-action="goto-files">${fileBadge(tf, seenBefore)}</button>` : ''
+          })()}</td>
           <td>${canEditTest(t) ? `<button class="btn link" data-action="edit-test" data-id="${t.id}">${isStaff() ? 'עריכה' : 'עדכון תוצאה'}</button>` : ''}</td>
         </tr>`).join('')}</tbody></table></div>` : '<p class="empty">אין בדיקות בהזמנה זו</p>'}
       ${rep?.message ? `<div class="request-msg ${rep.all_tests_done ? 'done' : ''}">
@@ -137,6 +150,7 @@ Pages.project = async (el, id) => {
   }
 
   const reload = () => load().catch((err) => toast(errorMessage(err)))
+  const liveReload = idleRunner(el, load)
   const findTest = (tid) => project.test_requests.flatMap((r) => r.tests).find((t) => t.id === tid)
 
   el.addEventListener('click', async (e) => {
@@ -144,6 +158,9 @@ Pages.project = async (el, id) => {
     if (!btn) return
     const tid = btn.dataset.id
     switch (btn.dataset.action) {
+      case 'goto-files':
+        el.querySelector('#files-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        break
       case 'edit-project':
         projectModal(project, (r) => (r === 'deleted' ? (location.hash = '#/projects') : reload())).catch((err) => toast(errorMessage(err)))
         break
@@ -177,6 +194,7 @@ Pages.project = async (el, id) => {
     const sel = e.target.closest('[data-status]')
     if (!sel) return
     const { error } = await db.from('tests').update({ status: sel.value }).eq('id', sel.dataset.status)
+    sel.blur() // let the live refresh show the recalculated report right away
     toast(error ? errorMessage(error) : 'הסטטוס עודכן')
     // Realtime reloads the page with the recalculated report.
   })
@@ -225,5 +243,10 @@ Pages.project = async (el, id) => {
   })
 
   await load()
-  return watchTables(`project-${id}`, ['tests', 'reports', 'test_requests', 'attachments'], reload)
+  return watchTables(`project-${id}`, ['projects', 'project_labs', 'clients', 'tests', 'reports', 'test_requests', 'attachments'],
+    (payload) => {
+      notifyNewFile(payload)
+      markProjectSeen(id).catch(() => {})
+      liveReload()
+    })
 }

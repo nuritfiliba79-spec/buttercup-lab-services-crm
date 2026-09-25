@@ -12,7 +12,7 @@ Pages.dashboard = async (el) => {
   let flashId = null
 
   async function load() {
-    const [reports, tests] = await Promise.all([
+    const [reports, tests, files, views] = await Promise.all([
       db.from('reports')
         .select(`*, test_request:test_requests(request_number, test_date,
           project:projects(id, project_number, name, client:clients(name)))`)
@@ -21,14 +21,16 @@ Pages.dashboard = async (el) => {
         .select(`id, test_type, status, due_date, performed_by, lab_id, lab:labs(name),
           test_request:test_requests(request_number, project:projects(id, name))`)
         .order('due_date', { nullsFirst: false }).then(check),
+      db.from('attachments')
+        .select('id, file_name, file_type, bucket, created_at, uploaded_by, project:projects(id, name, project_number)')
+        .order('created_at', { ascending: false }).limit(8).then(check),
+      loadProjectViews(),
     ])
-    // Don't wipe a notes field the user is typing in; the next change will refresh.
-    if (body.contains(document.activeElement) && document.activeElement.matches('input')) return
-    render(reports, tests)
+    render(reports, tests, files, views)
     flashId = null
   }
 
-  function render(reports, allTests) {
+  function render(reports, allTests, files, views) {
     // Technicians see whole requests (for context) but the numbers are about their lab's tests.
     const tests = isTech() ? allTests.filter((t) => t.lab_id === Profile.lab_id) : allTests
     const open = tests.filter((t) => ['pending', 'in_progress'].includes(t.status))
@@ -92,6 +94,25 @@ Pages.dashboard = async (el) => {
             </tr>`).join('')}
           </tbody>
         </table></div>`}
+      </section>
+
+      <section class="card">
+        <div class="section-head"><h2>📎 קבצים אחרונים</h2>
+          <span class="muted">${files.filter((f) => isNewFile(f, views.get(f.project?.id))).length} חדשים מאז הביקור האחרון בפרויקט</span></div>
+        ${files.length === 0 ? '<p class="empty">לא הועלו קבצים</p>' : `
+        <div class="table-wrap"><table>
+          <thead><tr><th>קובץ</th><th>סוג</th><th>אזור</th><th>פרויקט</th><th>הועלה</th></tr></thead>
+          <tbody>${files.map((f) => {
+            const fresh = isNewFile(f, views.get(f.project?.id))
+            return `<tr class="${fresh ? 'is-new' : ''}">
+              <td class="ltr">${esc(f.file_name)}${fresh ? ' <span class="badge badge-new">חדש</span>' : ''}</td>
+              <td>${esc(FILE_TYPE[f.file_type] ?? f.file_type)}</td>
+              <td>${esc(STORAGE_AREAS[f.bucket] ?? f.bucket)}</td>
+              <td><a href="#/project/${f.project?.id}">${esc(f.project?.name ?? f.project?.project_number)}</a></td>
+              <td class="muted nowrap">${new Date(f.created_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            </tr>`
+          }).join('')}</tbody>
+        </table></div>`}
       </section>`
   }
 
@@ -99,6 +120,7 @@ Pages.dashboard = async (el) => {
     const sel = e.target.closest('[data-status]')
     if (sel) {
       const { error } = await db.from('tests').update({ status: sel.value }).eq('id', sel.dataset.status)
+    sel.blur() // let the live refresh show the recalculated report right away
       toast(error ? errorMessage(error) : 'הסטטוס עודכן')
       return
     }
@@ -112,9 +134,11 @@ Pages.dashboard = async (el) => {
   })
 
   await load()
-  return watchTables('dashboard', ['reports', 'tests', 'test_requests'], (payload) => {
+  const liveLoad = idleRunner(body, load) // waits while a note is being typed
+  return watchTables('dashboard', ['reports', 'tests', 'test_requests', 'attachments', 'projects', 'clients'], (payload) => {
+    notifyNewFile(payload)
     if (payload.table === 'reports') flashId = payload.new?.id ?? null
-    load().catch((err) => toast(errorMessage(err)))
+    liveLoad()
   }, (on) => {
     const live = el.querySelector('#live')
     live.classList.toggle('on', on)

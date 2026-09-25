@@ -138,7 +138,7 @@ Pages.overview = async (el) => {
   }
 
   await load()
-  return watchTables('admin-overview', ['tests', 'reports', 'clients', 'projects'], () => load().catch((e) => toast(errorMessage(e))),
+  return watchTables('admin-overview', ['tests', 'reports', 'clients', 'projects', 'profiles', 'attachments', 'labs'], () => load().catch((e) => toast(errorMessage(e))),
     (on) => {
       const live = el.querySelector('#live')
       live.classList.toggle('on', on)
@@ -277,6 +277,9 @@ Pages.users = async (el) => {
     }
   })
   await load()
+  return watchTables('admin-users', ['profiles'], (payload) => {
+    load().catch((err) => toast(errorMessage(err)))
+  })
 }
 
 // ---------- Data management (view + delete any record) ----------
@@ -361,6 +364,9 @@ Pages.data = async (el, tableName) => {
     }, 'לאישור')
   })
   await load()
+  return watchTables(`admin-data-${table}`, [table], (payload) => {
+    load().catch((err) => toast(errorMessage(err)))
+  })
 }
 
 // ---------- Router ----------

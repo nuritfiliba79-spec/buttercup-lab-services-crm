@@ -57,6 +57,40 @@ function uploadChoices() {
   return []
 }
 
+// ---------- Attached-file indicators ----------
+
+// When the current user last opened each project: Map(project_id -> timestamp).
+async function loadProjectViews() {
+  const rows = check(await db.from('project_views').select('project_id, seen_at'))
+  return new Map(rows.map((r) => [r.project_id, r.seen_at]))
+}
+
+async function markProjectSeen(projectId) {
+  await db.from('project_views').upsert({ user_id: Profile.id, project_id: projectId, seen_at: new Date().toISOString() })
+}
+
+// Files someone else uploaded after the user's last visit (never visited = all of them).
+function isNewFile(file, seenAt) {
+  return file.uploaded_by !== Profile?.id && (!seenAt || new Date(file.created_at) > new Date(seenAt))
+}
+
+// "📎 3  [1 חדש]" — or a dash when there are no files.
+function fileBadge(files, seenAt) {
+  if (!files?.length) return '<span class="muted">—</span>'
+  const fresh = files.filter((f) => isNewFile(f, seenAt)).length
+  const title = `${files.length} קבצים מצורפים${fresh ? `, ${fresh} חדשים מאז הביקור האחרון` : ''}`
+  return `<span class="files-count" title="${title}">📎 ${files.length}</span>${
+    fresh ? ` <span class="badge badge-new">${fresh === 1 ? 'חדש' : `${fresh} חדשים`}</span>` : ''}`
+}
+
+// Toast for a file someone else just uploaded (realtime INSERT payload).
+function notifyNewFile(payload) {
+  const f = payload?.new
+  if (payload?.table === 'attachments' && payload.eventType === 'INSERT' && f && f.uploaded_by !== Profile?.id) {
+    toast(`📎 קובץ חדש הועלה: ${f.file_name}`)
+  }
+}
+
 // Deletes the stored objects for a list of attachment rows ({ bucket, storage_path }).
 async function removeStoredFiles(rows) {
   const byBucket = {}
@@ -248,6 +282,27 @@ function addPasswordToggles(root = document) {
   })
 }
 addPasswordToggles()
+
+// Wraps a re-render so live updates never wipe what the user is doing: while a field
+// inside `el` is focused (except search boxes) or a file is chosen, it retries shortly.
+function idleRunner(el, fn) {
+  let timer = null
+  const busy = () => {
+    const a = document.activeElement
+    const editing = a && el.contains(a) && a.matches('input:not([type="search"]), textarea, select')
+    const choosingFile = [...el.querySelectorAll('input[type="file"]')].some((i) => i.files?.length)
+    return editing || choosingFile
+  }
+  const run = () => {
+    clearTimeout(timer)
+    if (busy()) {
+      timer = setTimeout(run, 1500)
+      return
+    }
+    Promise.resolve(fn()).catch((err) => toast(errorMessage(err)))
+  }
+  return run
+}
 
 // Subscribes to changes on the given tables and calls `onChange` (debounced). Returns an unsubscribe fn.
 function watchTables(name, tables, onChange, onStatus) {

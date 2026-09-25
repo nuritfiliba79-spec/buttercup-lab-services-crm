@@ -34,4 +34,7 @@ Pages.labs = async (el) => {
     if (btn?.dataset.action === 'edit') labModal(labs.find((l) => l.id === btn.dataset.id), load)
   })
   await load()
+  return watchTables('labs', ['labs', 'tests'], (payload) => {
+    load().catch((err) => toast(errorMessage(err)))
+  })
 }

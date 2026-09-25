@@ -42,12 +42,16 @@ Pages.clients = async (el) => {
     if (btn?.dataset.action === 'edit') clientModal(clients.find((c) => c.id === btn.dataset.id), load)
   })
   await load()
+  return watchTables('clients', ['clients', 'projects'], (payload) => {
+    load().catch((err) => toast(errorMessage(err)))
+  })
 }
 
 Pages.client = async (el, id) => {
   async function load() {
+    const views = await loadProjectViews()
     const client = check(await db.from('clients')
-      .select('*, projects(id, project_number, name, requirements, created_at, test_requests(tests_completed))')
+      .select('*, projects(id, project_number, name, requirements, created_at, test_requests(tests_completed), attachments(id, created_at, uploaded_by))')
       .eq('id', id).single())
     client.projects.sort((a, b) => b.created_at.localeCompare(a.created_at))
 
@@ -68,7 +72,7 @@ Pages.client = async (el, id) => {
           <button class="btn primary small staff-only" data-action="new-project">+ פרויקט חדש</button></div>
         ${client.projects.length === 0 ? '<p class="empty">אין פרויקטים ללקוח זה</p>' : `
         <div class="table-wrap"><table>
-          <thead><tr><th>מספר</th><th>שם</th><th>מה נדרש</th><th>הזמנות</th><th>נוצר</th></tr></thead>
+          <thead><tr><th>מספר</th><th>שם</th><th>מה נדרש</th><th>הזמנות</th><th>קבצים</th><th>נוצר</th></tr></thead>
           <tbody>${client.projects.map((p) => {
             const done = p.test_requests.filter((r) => r.tests_completed).length
             return `<tr>
@@ -76,6 +80,7 @@ Pages.client = async (el, id) => {
               <td><a href="#/project/${p.id}">${val(p.name)}</a></td>
               <td class="clip">${val(p.requirements)}</td>
               <td>${done}/${p.test_requests.length} הושלמו</td>
+              <td>${fileBadge(p.attachments, views.get(p.id))}</td>
               <td class="muted">${fmtDate(p.created_at)}</td>
             </tr>`
           }).join('')}</tbody>
@@ -88,4 +93,8 @@ Pages.client = async (el, id) => {
       projectModal(null, (pid) => (location.hash = `#/project/${pid}`), client.id).catch((err) => toast(errorMessage(err)))
   }
   await load()
+  return watchTables(`client-${id}`, ['clients', 'projects', 'test_requests', 'attachments'], (payload) => {
+    notifyNewFile(payload)
+    load().catch((err) => toast(errorMessage(err)))
+  })
 }

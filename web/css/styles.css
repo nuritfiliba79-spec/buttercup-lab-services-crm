@@ -274,3 +274,12 @@ label.check input { width: auto; }
 .files-area:first-of-type { margin-top: 4px; }
 .upload .upload-hint { grid-column: 1 / -1; margin: 0; }
 td.nowrap { white-space: nowrap; }
+
+/* Attached-file indicators */
+.files-count { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.badge-new { background: var(--accent-soft); color: #A42A2A; }
+tr.is-new td:first-child { box-shadow: inset -3px 0 0 var(--accent); }
+.files-link { background: none; border: none; font: inherit; color: var(--primary); cursor: pointer; padding: 0; }
+.files-link:hover { text-decoration: underline; }
+.check-inline { flex-direction: row; align-items: center; gap: 6px; font-weight: 500; white-space: nowrap; }
+.check-inline input { width: auto; }
