@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Buttercup">
+  <defs>
+    <radialGradient id="petal" cx="50%" cy="85%" r="90%">
+      <stop offset="0" stop-color="#D99A06"/>
+      <stop offset="0.45" stop-color="#F4C430"/>
+      <stop offset="1" stop-color="#FCE38A"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(32 33)">
+    <g stroke="#B7800A" stroke-width="0.8" fill="url(#petal)">
+      <path d="M0 -3 C-10 -7 -12 -23 0 -28 C12 -23 10 -7 0 -3Z"/>
+      <path d="M0 -3 C-10 -7 -12 -23 0 -28 C12 -23 10 -7 0 -3Z" transform="rotate(72)"/>
+      <path d="M0 -3 C-10 -7 -12 -23 0 -28 C12 -23 10 -7 0 -3Z" transform="rotate(144)"/>
+      <path d="M0 -3 C-10 -7 -12 -23 0 -28 C12 -23 10 -7 0 -3Z" transform="rotate(216)"/>
+      <path d="M0 -3 C-10 -7 -12 -23 0 -28 C12 -23 10 -7 0 -3Z" transform="rotate(288)"/>
+    </g>
+    <!-- glossy highlights, typical of buttercup petals -->
+    <g fill="#FFFFFF" opacity="0.45">
+      <ellipse cx="-2.5" cy="-19" rx="2.2" ry="4.5" transform="rotate(-12)"/>
+      <ellipse cx="-2.5" cy="-19" rx="2.2" ry="4.5" transform="rotate(60)"/>
+      <ellipse cx="-2.5" cy="-19" rx="2.2" ry="4.5" transform="rotate(132)"/>
+      <ellipse cx="-2.5" cy="-19" rx="2.2" ry="4.5" transform="rotate(204)"/>
+      <ellipse cx="-2.5" cy="-19" rx="2.2" ry="4.5" transform="rotate(276)"/>
+    </g>
+    <circle r="7.5" fill="#6E8B2E"/>
+    <g fill="#E0A800">
+      <circle cx="0" cy="-8.5" r="1.6"/><circle cx="6" cy="-6" r="1.6"/><circle cx="8.5" cy="0" r="1.6"/>
+      <circle cx="6" cy="6" r="1.6"/><circle cx="0" cy="8.5" r="1.6"/><circle cx="-6" cy="6" r="1.6"/>
+      <circle cx="-8.5" cy="0" r="1.6"/><circle cx="-6" cy="-6" r="1.6"/>
+    </g>
+    <circle r="4" fill="#8FAE3C"/>
+  </g>
+</svg>

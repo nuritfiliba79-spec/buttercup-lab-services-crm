@@ -1,0 +1,12 @@
+# Secrets - do not commit
+.env
+.env.*
+web/js/config.js
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+node_modules/
+.DS_Store
+Thumbs.db
