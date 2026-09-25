@@ -2,12 +2,12 @@ Pages.projects = async (el) => {
   el.innerHTML = `
     <div class="page-head">
       <div><h1>פרויקטים</h1><p class="subtitle">פרויקטים, מעבדות נדרשות והתקדמות הבדיקות</p></div>
-      <button class="btn primary" data-action="new">+ פרויקט חדש</button>
+      <button class="btn primary staff-only" data-action="new">+ פרויקט חדש</button>
     </div>
     <section class="card">
       <div class="toolbar">
         <input type="search" id="q" placeholder="חיפוש לפי מספר, שם או דרישות…" aria-label="חיפוש">
-        <select id="client" aria-label="סינון לפי לקוח"></select>
+        <select id="client" class="staff-only" aria-label="סינון לפי לקוח"></select>
       </div>
       <div id="list"><p class="muted">טוען…</p></div>
     </section>`

@@ -26,7 +26,7 @@ Pages.project = async (el, id) => {
       <div class="page-head">
         <div><h1><span class="mono">${esc(p.project_number)}</span> · ${esc(p.name ?? '')}</h1>
           <p class="subtitle">לקוח: <a href="#/client/${p.client.id}">${esc(p.client.name)}</a> · נפתח ${fmtDate(p.created_at)}</p></div>
-        <button class="btn ghost" data-action="edit-project">עריכת פרויקט</button>
+        <button class="btn ghost staff-only" data-action="edit-project">עריכת פרויקט</button>
       </div>
 
       <section class="card details">
@@ -40,13 +40,13 @@ Pages.project = async (el, id) => {
 
       <section class="card">
         <div class="section-head"><h2>הזמנות בדיקה</h2>
-          <button class="btn primary small" data-action="new-request">+ הזמנה חדשה</button></div>
+          <button class="btn primary small staff-only" data-action="new-request">+ הזמנה חדשה</button></div>
         ${p.test_requests.map(renderRequest).join('') || '<p class="empty">אין הזמנות בדיקה בפרויקט זה</p>'}
       </section>
 
       <section class="card">
         <div class="section-head"><h2>קבצים · שרטוטים, תמונות ו-COA</h2></div>
-        <form class="upload" id="upload">
+        <form class="upload staff-only" id="upload">
           <label>קובץ<input type="file" name="file" required></label>
           <label>סוג<select name="file_type">${options(Object.entries(FILE_TYPE), 'drawing')}</select></label>
           <label>שיוך להזמנה<select name="test_request_id">
@@ -63,7 +63,7 @@ Pages.project = async (el, id) => {
             <td>${fmtSize(f.size_bytes)}</td>
             <td class="muted">${fmtDate(f.created_at)}</td>
             <td><button class="btn link" data-action="download" data-id="${f.id}">פתיחה</button>
-                <button class="btn link" data-action="delete-file" data-id="${f.id}">מחיקה</button></td>
+                <button class="btn link staff-only" data-action="delete-file" data-id="${f.id}">מחיקה</button></td>
           </tr>`).join('')}</tbody>
         </table></div>`}
       </section>`
@@ -77,8 +77,8 @@ Pages.project = async (el, id) => {
         ${rep ? badge(rep.status, REPORT_STATUS) : ''}
         ${rep ? progress(rep.completed_tests, rep.total_tests) : ''}
         <span class="spacer"></span>
-        <button class="btn link" data-action="edit-request" data-id="${r.id}">עריכה</button>
-        <button class="btn ghost small" data-action="new-test" data-id="${r.id}">+ בדיקה</button>
+        <button class="btn link staff-only" data-action="edit-request" data-id="${r.id}">עריכה</button>
+        <button class="btn ghost small staff-only" data-action="new-test" data-id="${r.id}">+ בדיקה</button>
       </div>
       <div class="request-meta">
         <span><b>תאריך בדיקה</b>${fmtDate(r.test_date)}</span>
@@ -87,15 +87,17 @@ Pages.project = async (el, id) => {
         <span><b>בוצעו כל הבדיקות</b>${r.tests_completed ? 'כן' : 'לא'}</span>
       </div>
       ${r.tests.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>סוג בדיקה</th><th>מעבדה</th><th>מי ביצע</th><th>יעד</th><th>סטטוס</th><th>תוצאה</th><th></th></tr></thead>
+        <thead><tr><th>סוג בדיקה</th><th>מעבדה</th><th>מי ביצע</th><th>יעד</th><th>סטטוס</th><th>תוצאה</th><th class="staff-only"></th></tr></thead>
         <tbody>${r.tests.map((t) => `<tr>
           <td>${esc(t.test_type)}</td>
           <td>${val(t.lab?.name)}</td>
           <td>${val(t.performed_by)}</td>
           <td class="${isOverdue(t) ? 'overdue' : ''}">${fmtDate(t.due_date)}</td>
-          <td><select class="inline" data-status="${t.id}" aria-label="סטטוס בדיקה">${options(Object.entries(TEST_STATUS), t.status)}</select></td>
+          <td>${isStaff()
+            ? `<select class="inline" data-status="${t.id}" aria-label="סטטוס בדיקה">${options(Object.entries(TEST_STATUS), t.status)}</select>`
+            : badge(t.status, TEST_STATUS)}</td>
           <td>${val(t.result_notes)}</td>
-          <td><button class="btn link" data-action="edit-test" data-id="${t.id}">עריכה</button></td>
+          <td class="staff-only"><button class="btn link" data-action="edit-test" data-id="${t.id}">עריכה</button></td>
         </tr>`).join('')}</tbody></table></div>` : '<p class="empty">אין בדיקות בהזמנה זו</p>'}
       ${rep?.message ? `<div class="request-msg ${rep.all_tests_done ? 'done' : ''}">
         ${esc(rep.message)}${rep.generated_at ? ` · הופק ${fmtDate(rep.generated_at)}` : ''}${rep.notes ? ` · ${esc(rep.notes)}` : ''}</div>` : ''}

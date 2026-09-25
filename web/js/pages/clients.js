@@ -52,10 +52,10 @@ Pages.client = async (el, id) => {
     client.projects.sort((a, b) => b.created_at.localeCompare(a.created_at))
 
     el.innerHTML = `
-      <a href="#/clients" class="back">→ חזרה ללקוחות</a>
+      <a href="#/clients" class="back staff-only">→ חזרה ללקוחות</a>
       <div class="page-head">
         <div><h1>${esc(client.name)}</h1><p class="subtitle">לקוח מאז ${fmtDate(client.created_at)}</p></div>
-        <button class="btn ghost" data-action="edit">עריכת לקוח</button>
+        <button class="btn ghost staff-only" data-action="edit">עריכת לקוח</button>
       </div>
       <section class="card details">
         <div><span class="label">איש קשר</span>${val(client.contact_person)}</div>
@@ -65,7 +65,7 @@ Pages.client = async (el, id) => {
       </section>
       <section class="card">
         <div class="section-head"><h2>פרויקטים</h2>
-          <button class="btn primary small" data-action="new-project">+ פרויקט חדש</button></div>
+          <button class="btn primary small staff-only" data-action="new-project">+ פרויקט חדש</button></div>
         ${client.projects.length === 0 ? '<p class="empty">אין פרויקטים ללקוח זה</p>' : `
         <div class="table-wrap"><table>
           <thead><tr><th>מספר</th><th>שם</th><th>מה נדרש</th><th>הזמנות</th><th>נוצר</th></tr></thead>

@@ -12,21 +12,62 @@
 </head>
 <body>
 
-  <!-- Login -->
+  <!-- Login / Sign up -->
   <div id="login-view" class="login" hidden>
-    <form id="login-form" class="login-card">
-      <div class="login-brand">
-        <img src="img/buttercup.svg" alt="" class="logo logo-lg">
-        <div>
-          <div class="brand-name">Buttercup Lab Services</div>
-          <div class="brand-sub">מערכת לניהול לקוחות ובדיקות מעבדה</div>
-        </div>
+    <div class="login-card">
+      <div class="lockup">
+        <img src="img/buttercup.svg" alt="" class="logo logo-xl">
+        <div class="lockup-name">Buttercup</div>
+        <div class="lockup-en">LAB SERVICES</div>
+        <div class="lockup-sub">מערכת לניהול לקוחות ובדיקות מעבדה</div>
       </div>
-      <label>מייל<input name="email" type="email" dir="ltr" autocomplete="username" required></label>
-      <label>סיסמה<input name="password" type="password" dir="ltr" autocomplete="current-password" required></label>
-      <div class="error" id="login-error" hidden></div>
-      <button class="btn primary block" type="submit">כניסה</button>
-    </form>
+
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab active" data-tab="login" aria-selected="true">כניסה</button>
+        <button type="button" role="tab" class="tab" data-tab="signup" aria-selected="false">הרשמה</button>
+      </div>
+
+      <!-- Login -->
+      <form id="login-form" class="auth-form" data-panel="login" novalidate>
+        <label>מייל<input name="email" type="email" dir="ltr" autocomplete="username" required></label>
+        <label>סיסמה<input name="password" type="password" dir="ltr" autocomplete="current-password" required></label>
+        <div class="error" hidden></div>
+        <button class="btn primary block" type="submit">כניסה</button>
+        <p class="switch">עדיין אין לכם חשבון? <button type="button" class="btn link" data-tab="signup">להרשמה</button></p>
+      </form>
+
+      <!-- Sign up, step 1: company details -->
+      <form id="signup-details" class="auth-form" data-panel="signup" hidden novalidate>
+        <ol class="steps"><li class="current">פרטי החברה</li><li>יצירת סיסמה</li></ol>
+        <label>שם החברה *<input name="company_name" autocomplete="organization" required></label>
+        <label>איש קשר *<input name="contact_person" autocomplete="name" required></label>
+        <label>טלפון *<input name="phone" type="tel" dir="ltr" autocomplete="tel" required
+          pattern="[0-9+\-\s()]{9,20}" title="מספר טלפון תקין, לדוגמה 050-1234567"></label>
+        <label>מייל *<input name="email" type="email" dir="ltr" autocomplete="email" required></label>
+        <div class="error" hidden></div>
+        <button class="btn primary block" type="submit">המשך ליצירת סיסמה ←</button>
+        <p class="switch">כבר רשומים? <button type="button" class="btn link" data-tab="login">לכניסה</button></p>
+      </form>
+
+      <!-- Sign up, step 2: password for the email entered in step 1 -->
+      <form id="signup-password" class="auth-form" data-panel="signup-password" hidden novalidate>
+        <ol class="steps"><li class="done">פרטי החברה</li><li class="current">יצירת סיסמה</li></ol>
+        <label>מייל<input name="email" type="email" dir="ltr" readonly tabindex="-1" class="readonly"></label>
+        <label>סיסמה *<input name="password" type="password" dir="ltr" autocomplete="new-password" required minlength="8"></label>
+        <label>אימות סיסמה *<input name="confirm" type="password" dir="ltr" autocomplete="new-password" required minlength="8"></label>
+        <p class="hint">לפחות 8 תווים, כולל אות ומספר.</p>
+        <div class="error" hidden></div>
+        <div class="row-buttons">
+          <button type="button" class="btn ghost" id="signup-back">→ חזרה</button>
+          <button class="btn primary" type="submit">יצירת חשבון</button>
+        </div>
+      </form>
+
+      <div id="signup-done" class="auth-form" data-panel="signup-done" hidden>
+        <div class="success">החשבון נוצר. שלחנו מייל לאימות הכתובת. אחרי האימות אפשר להיכנס.</div>
+        <button type="button" class="btn primary block" data-tab="login">לכניסה</button>
+      </div>
+    </div>
   </div>
 
   <!-- App -->
@@ -41,13 +82,15 @@
       </a>
       <nav class="nav">
         <a href="#/dashboard" data-page="dashboard">לוח בקרה</a>
-        <a href="#/clients" data-page="clients">לקוחות</a>
+        <a href="#/clients" data-page="clients" class="staff-only">לקוחות</a>
+        <a href="#/company" data-page="company" class="client-only">פרטי החברה</a>
         <a href="#/projects" data-page="projects">פרויקטים</a>
-        <a href="#/labs" data-page="labs">מעבדות</a>
+        <a href="#/labs" data-page="labs" class="staff-only">מעבדות</a>
       </nav>
       <div class="user">
+        <span class="role-tag" id="user-role"></span>
         <span id="user-email" dir="ltr"></span>
-        <button class="btn ghost-light small" id="logout">יציאה</button>
+        <button class="btn ghost small" id="logout">יציאה</button>
       </div>
     </aside>
     <main class="content" id="main"></main>

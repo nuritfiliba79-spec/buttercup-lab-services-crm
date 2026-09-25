@@ -1,7 +1,9 @@
 Pages.dashboard = async (el) => {
   el.innerHTML = `
     <div class="page-head">
-      <div><h1>לוח בקרה</h1><p class="subtitle">מעקב אחר הזמנות, בדיקות ודוחות</p></div>
+      <div><h1>לוח בקרה</h1><p class="subtitle">${isStaff()
+        ? 'מעקב אחר הזמנות, בדיקות ודוחות'
+        : 'מצב הבדיקות והדוחות של החברה שלכם, בזמן אמת'}</p></div>
       <span class="live" id="live">מתחבר…</span>
     </div>
     <div id="body"><p class="muted">טוען…</p></div>`
@@ -55,10 +57,14 @@ Pages.dashboard = async (el) => {
                 <td>${progress(r.completed_tests, r.total_tests)}</td>
                 <td>${badge(r.status, REPORT_STATUS)}</td>
                 <td>${val(r.message)}</td>
-                <td><input class="inline" data-notes="${r.id}" value="${esc(r.notes)}" placeholder="הוספת הערה…" aria-label="הערות לדוח"></td>
+                <td>${isStaff()
+                  ? `<input class="inline" data-notes="${r.id}" value="${esc(r.notes)}" placeholder="הוספת הערה…" aria-label="הערות לדוח">`
+                  : val(r.notes)}</td>
                 <td class="muted">${fmtDate(r.updated_at)}</td>
               </tr>`
-            }).join('') || '<tr><td colspan="8" class="empty">אין דוחות עדיין</td></tr>'}
+            }).join('') || `<tr><td colspan="8" class="empty">${isStaff()
+              ? 'אין דוחות עדיין'
+              : 'עדיין אין הזמנות בדיקה לחברה שלכם. ברגע שצוות המעבדה יפתח פרויקט, הוא יופיע כאן.'}</td></tr>`}
           </tbody>
         </table></div>
       </section>

@@ -6,6 +6,10 @@ const BUCKET = 'lab-files'
 // Page renderers register here: Pages[name] = async (el, id) => cleanupFn | undefined
 const Pages = {}
 
+// Signed-in user's profile ({ role: 'staff' | 'client', client_id }); set by app.js after login.
+let Profile = null
+const isStaff = () => Profile?.role === 'staff'
+
 const TEST_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם', failed: 'נכשל', cancelled: 'בוטל' }
 const REPORT_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם' }
 const FILE_TYPE = { drawing: 'שרטוט', image: 'תמונה', coa: 'COA', other: 'אחר' }
