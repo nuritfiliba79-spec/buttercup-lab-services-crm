@@ -69,8 +69,11 @@ h2 { font-size: 1.1rem; }
 .role-tag { background: var(--primary-soft); color: var(--primary); border-radius: 999px; padding: 1px 10px; font-weight: 600; }
 
 /* Role-based visibility (set on <body> after login) */
-body:not(.role-staff) .staff-only { display: none !important; }
+body:not(.can-manage) .staff-only { display: none !important; }
+body:not(.can-delete) .admin-only { display: none !important; }
+body:not(.can-upload) .upload-only { display: none !important; }
 body:not(.role-client) .client-only { display: none !important; }
+body:not(.role-technician) .tech-only { display: none !important; }
 
 .content { padding: 32px 36px 60px; max-width: 1280px; width: 100%; }
 
@@ -253,3 +256,5 @@ label.check input { width: auto; }
   .content { padding: 20px 16px 48px; }
   .upload, .row { grid-template-columns: 1fr; }
 }
+
+.nav a.nav-admin { margin-top: 10px; color: var(--primary); font-size: .9rem; }

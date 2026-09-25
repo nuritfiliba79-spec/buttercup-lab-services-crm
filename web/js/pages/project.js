@@ -46,7 +46,7 @@ Pages.project = async (el, id) => {
 
       <section class="card">
         <div class="section-head"><h2>קבצים · שרטוטים, תמונות ו-COA</h2></div>
-        <form class="upload staff-only" id="upload">
+        <form class="upload upload-only" id="upload">
           <label>קובץ<input type="file" name="file" required></label>
           <label>סוג<select name="file_type">${options(Object.entries(FILE_TYPE), 'drawing')}</select></label>
           <label>שיוך להזמנה<select name="test_request_id">
@@ -63,7 +63,7 @@ Pages.project = async (el, id) => {
             <td>${fmtSize(f.size_bytes)}</td>
             <td class="muted">${fmtDate(f.created_at)}</td>
             <td><button class="btn link" data-action="download" data-id="${f.id}">פתיחה</button>
-                <button class="btn link staff-only" data-action="delete-file" data-id="${f.id}">מחיקה</button></td>
+                <button class="btn link admin-only" data-action="delete-file" data-id="${f.id}">מחיקה</button></td>
           </tr>`).join('')}</tbody>
         </table></div>`}
       </section>`
@@ -87,17 +87,17 @@ Pages.project = async (el, id) => {
         <span><b>בוצעו כל הבדיקות</b>${r.tests_completed ? 'כן' : 'לא'}</span>
       </div>
       ${r.tests.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>סוג בדיקה</th><th>מעבדה</th><th>מי ביצע</th><th>יעד</th><th>סטטוס</th><th>תוצאה</th><th class="staff-only"></th></tr></thead>
+        <thead><tr><th>סוג בדיקה</th><th>מעבדה</th><th>מי ביצע</th><th>יעד</th><th>סטטוס</th><th>תוצאה</th><th></th></tr></thead>
         <tbody>${r.tests.map((t) => `<tr>
           <td>${esc(t.test_type)}</td>
           <td>${val(t.lab?.name)}</td>
           <td>${val(t.performed_by)}</td>
           <td class="${isOverdue(t) ? 'overdue' : ''}">${fmtDate(t.due_date)}</td>
-          <td>${isStaff()
+          <td>${canEditTest(t)
             ? `<select class="inline" data-status="${t.id}" aria-label="סטטוס בדיקה">${options(Object.entries(TEST_STATUS), t.status)}</select>`
             : badge(t.status, TEST_STATUS)}</td>
           <td>${val(t.result_notes)}</td>
-          <td class="staff-only"><button class="btn link" data-action="edit-test" data-id="${t.id}">עריכה</button></td>
+          <td>${canEditTest(t) ? `<button class="btn link" data-action="edit-test" data-id="${t.id}">${isStaff() ? 'עריכה' : 'עדכון תוצאה'}</button>` : ''}</td>
         </tr>`).join('')}</tbody></table></div>` : '<p class="empty">אין בדיקות בהזמנה זו</p>'}
       ${rep?.message ? `<div class="request-msg ${rep.all_tests_done ? 'done' : ''}">
         ${esc(rep.message)}${rep.generated_at ? ` · הופק ${fmtDate(rep.generated_at)}` : ''}${rep.notes ? ` · ${esc(rep.notes)}` : ''}</div>` : ''}

@@ -1,8 +1,9 @@
 Pages.dashboard = async (el) => {
   el.innerHTML = `
     <div class="page-head">
-      <div><h1>לוח בקרה</h1><p class="subtitle">${isStaff()
-        ? 'מעקב אחר הזמנות, בדיקות ודוחות'
+      <div><h1>${isTech() ? 'הבדיקות שלי' : 'לוח בקרה'}</h1><p class="subtitle">${
+        isStaff() ? 'מעקב אחר הזמנות, בדיקות ודוחות'
+        : isTech() ? 'בדיקות המעבדה שלך: עדכון סטטוס, תוצאות והערות לדוחות'
         : 'מצב הבדיקות והדוחות של החברה שלכם, בזמן אמת'}</p></div>
       <span class="live" id="live">מתחבר…</span>
     </div>
@@ -17,7 +18,7 @@ Pages.dashboard = async (el) => {
           project:projects(id, project_number, name, client:clients(name)))`)
         .order('updated_at', { ascending: false }).then(check),
       db.from('tests')
-        .select(`id, test_type, status, due_date, performed_by, lab:labs(name),
+        .select(`id, test_type, status, due_date, performed_by, lab_id, lab:labs(name),
           test_request:test_requests(request_number, project:projects(id, name))`)
         .order('due_date', { nullsFirst: false }).then(check),
     ])
@@ -27,11 +28,14 @@ Pages.dashboard = async (el) => {
     flashId = null
   }
 
-  function render(reports, tests) {
+  function render(reports, allTests) {
+    // Technicians see whole requests (for context) but the numbers are about their lab's tests.
+    const tests = isTech() ? allTests.filter((t) => t.lab_id === Profile.lab_id) : allTests
     const open = tests.filter((t) => ['pending', 'in_progress'].includes(t.status))
     const overdue = open.filter(isOverdue).length
     const stats = [
-      ['הזמנות פתוחות', reports.filter((r) => !r.all_tests_done).length, ''],
+      [isTech() ? 'בדיקות ממתינות' : 'הזמנות פתוחות',
+        isTech() ? tests.filter((t) => t.status === 'pending').length : reports.filter((r) => !r.all_tests_done).length, ''],
       ['בדיקות בביצוע', tests.filter((t) => t.status === 'in_progress').length, ''],
       ['בדיקות באיחור', overdue, overdue ? 'warn' : ''],
       ['דוחות מוכנים', reports.filter((r) => r.all_tests_done).length, 'ok'],
@@ -57,7 +61,7 @@ Pages.dashboard = async (el) => {
                 <td>${progress(r.completed_tests, r.total_tests)}</td>
                 <td>${badge(r.status, REPORT_STATUS)}</td>
                 <td>${val(r.message)}</td>
-                <td>${isStaff()
+                <td>${isStaff() || isTech()
                   ? `<input class="inline" data-notes="${r.id}" value="${esc(r.notes)}" placeholder="הוספת הערה…" aria-label="הערות לדוח">`
                   : val(r.notes)}</td>
                 <td class="muted">${fmtDate(r.updated_at)}</td>
@@ -70,7 +74,7 @@ Pages.dashboard = async (el) => {
       </section>
 
       <section class="card">
-        <div class="section-head"><h2>בדיקות פתוחות לפי יעד</h2></div>
+        <div class="section-head"><h2>${isTech() ? 'בדיקות פתוחות במעבדה שלי' : 'בדיקות פתוחות לפי יעד'}</h2></div>
         ${open.length === 0 ? '<p class="empty">אין בדיקות פתוחות</p>' : `
         <div class="table-wrap"><table>
           <thead><tr><th>יעד</th><th>סוג בדיקה</th><th>פרויקט</th><th>הזמנה</th><th>מעבדה</th><th>מבצע</th><th>סטטוס</th></tr></thead>
@@ -82,7 +86,9 @@ Pages.dashboard = async (el) => {
               <td class="mono">${esc(t.test_request?.request_number)}</td>
               <td>${val(t.lab?.name)}</td>
               <td>${val(t.performed_by)}</td>
-              <td>${badge(t.status, TEST_STATUS)}</td>
+              <td>${canEditTest(t)
+                ? `<select class="inline" data-status="${t.id}" aria-label="סטטוס בדיקה">${options(Object.entries(TEST_STATUS), t.status)}</select>`
+                : badge(t.status, TEST_STATUS)}</td>
             </tr>`).join('')}
           </tbody>
         </table></div>`}
@@ -90,6 +96,12 @@ Pages.dashboard = async (el) => {
   }
 
   body.addEventListener('change', async (e) => {
+    const sel = e.target.closest('[data-status]')
+    if (sel) {
+      const { error } = await db.from('tests').update({ status: sel.value }).eq('id', sel.dataset.status)
+      toast(error ? errorMessage(error) : 'הסטטוס עודכן')
+      return
+    }
     const input = e.target.closest('[data-notes]')
     if (!input) return
     const { error } = await db.from('reports').update({ notes: input.value.trim() || null }).eq('id', input.dataset.notes)

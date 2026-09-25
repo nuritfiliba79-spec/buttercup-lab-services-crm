@@ -6,9 +6,26 @@ const BUCKET = 'lab-files'
 // Page renderers register here: Pages[name] = async (el, id) => cleanupFn | undefined
 const Pages = {}
 
-// Signed-in user's profile ({ role: 'staff' | 'client', client_id }); set by app.js after login.
+// Signed-in user's profile ({ role, client_id, lab_id }); set after login.
 let Profile = null
-const isStaff = () => Profile?.role === 'staff'
+const ROLE_LABELS = { admin: 'מנהל מערכת', lab_manager: 'מנהל מעבדה', technician: 'מבצע בדיקות', client: 'לקוח' }
+const isAdmin = () => Profile?.role === 'admin'
+const isTech = () => Profile?.role === 'technician'
+// "Staff" = may create and edit operational data (admin + lab manager). Only admins delete.
+const isStaff = () => ['admin', 'lab_manager'].includes(Profile?.role)
+// Technicians may update status/results of tests at their own lab.
+const canEditTest = (test) => isStaff() || (isTech() && !!test.lab_id && test.lab_id === Profile.lab_id)
+
+// Body classes drive role-based visibility in CSS (.staff-only, .admin-only, .upload-only, .client-only).
+function applyRoleClasses() {
+  const cls = document.body.classList
+  cls.remove(...[...cls].filter((c) => c.startsWith('role-') || c.startsWith('can-')))
+  if (!Profile) return
+  cls.add(`role-${Profile.role}`)
+  if (isStaff()) cls.add('can-manage')
+  if (isAdmin()) cls.add('can-delete')
+  if (isStaff() || isTech()) cls.add('can-upload')
+}
 
 const TEST_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם', failed: 'נכשל', cancelled: 'בוטל' }
 const REPORT_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם' }
@@ -117,7 +134,7 @@ function openModal({ title, body, submitLabel = 'שמירה', onSubmit, onDelete
       <div class="modal-body">${body}</div>
       <div class="error" hidden></div>
       <footer>
-        ${onDelete ? '<button type="button" class="btn danger" data-delete>מחיקה</button>' : ''}
+        ${onDelete && isAdmin() ? '<button type="button" class="btn danger" data-delete>מחיקה</button>' : ''}
         <span class="spacer"></span>
         <button type="button" class="btn ghost" data-close>ביטול</button>
         <button type="submit" class="btn primary">${esc(submitLabel)}</button>
@@ -158,7 +175,8 @@ function openModal({ title, body, submitLabel = 'שמירה', onSubmit, onDelete
   const del = root.querySelector('[data-delete]')
   if (del) del.onclick = () => twoStep(del, () => run(onDelete))
 
-  form.querySelector('input, select, textarea')?.focus()
+  form.querySelector('input:not([disabled]), select:not([disabled]), textarea')?.focus()
+  return root
 }
 
 // Subscribes to changes on the given tables and calls `onChange` (debounced). Returns an unsubscribe fn.

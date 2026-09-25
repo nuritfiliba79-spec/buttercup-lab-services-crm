@@ -19,25 +19,30 @@
 - **לוח בקרה** – מדדים, דוחות ובדיקות פתוחות לפי יעד, כולל סימון בדיקות באיחור. מתעדכן חי.
 - **כניסה והרשמה** – כניסה עם מייל וסיסמה. הרשמה בשני שלבים: (1) שם החברה, איש קשר, טלפון ומייל, כולם שדות חובה; (2) יצירת סיסמה למייל שהוזן.
 
-## הרשאות
+## תפקידים והרשאות
 
-| תפקיד | מה רואים | מה אפשר לעשות |
-|---|---|---|
-| **צוות המעבדה** (`staff`) | הכל | יצירה, עריכה, מחיקה, העלאת קבצים |
-| **לקוח** (`client`) | רק את החברה שלו, את הפרויקטים שלה, הבדיקות, הדוחות והקבצים | צפייה בלבד |
+ההרשאות נאכפות במסד הנתונים (Row Level Security + טריגרים), לא רק בממשק.
 
-כל מי שנרשם דרך הטופס מקבל תפקיד **לקוח**, ונוצרת עבורו רשומת לקוח עם פרטי החברה. ההרשאות נאכפות במסד הנתונים (Row Level Security), לא רק בממשק.
-### סיסמה ראשונית למשתמש חדש
-מנהל יכול ליצור משתמש עם סיסמה ראשונית (Supabase Admin API / Dashboard), עם `app_metadata`:
-```json
-{ "role": "staff", "must_change_password": true }
-```
-בכניסה הראשונה המערכת חוסמת את הגישה ומבקשת לבחור סיסמה אישית חדשה. הסיסמה צריכה להיות שונה מהסיסמה הראשונית. רק אחרי זה נפתחת המערכת. אפשר לשנות את `app_metadata` רק עם מפתח ה-service role, כך שמשתמש לא יכול להעניק לעצמו הרשאות.
+| תפקיד | צפייה | עריכה | מחיקה |
+|---|---|---|---|
+| **מנהל מערכת** (`admin`) | הכל | הכל, כולל משתמשים ותפקידים (פאנל ניהול) | כן |
+| **מנהל מעבדה** (`lab_manager`) | הכל | לקוחות, פרויקטים, הזמנות, בדיקות, מעבדות, קבצים | לא |
+| **מבצע בדיקות** (`technician`) | הזמנות שיש בהן בדיקות של המעבדה שלו | סטטוס, מבצע ותוצאה של בדיקות המעבדה שלו; הערות לדוח; העלאת קבצים | לא |
+| **לקוח** (`client`) | רק הפרויקטים של החברה שלו | — | לא |
 
-כדי להפוך משתמש קיים לחבר צוות:
-```sql
-update profiles set role = 'staff' where id = (select id from auth.users where email = 'name@company.com');
-```
+- **הרשמה עצמית** דרך הטופס יוצרת תמיד **לקוח**, עם רשומת חברה.
+- **מבצע בדיקות** מוגבל גם ברמת העמודה: טריגר חוסם שינוי של סוג הבדיקה, המעבדה או היעד.
+
+### פאנל ניהול (`web/admin.html`)
+כניסה נפרדת למנהלי מערכת בלבד. בפאנל:
+- **לוח בקרה:** מדדים, בדיקות לפי סטטוס, עומס לפי מעבדה, משתמשים לפי תפקיד וכניסות אחרונות.
+- **משתמשים והרשאות:** יצירת משתמש עם סיסמה ראשונית, שינוי תפקיד ושיוך (מעבדה או חברה), איפוס סיסמה ומחיקה.
+- **ניהול נתונים:** צפייה ומחיקה של כל רשומה.
+
+פעולות המשתמשים עוברות דרך Edge Function (`supabase/functions/admin-users`). הפונקציה בודקת שהקורא הוא מנהל, ומפתח ה-service role לא מגיע לדפדפן.
+
+### סיסמה ראשונית
+משתמש שנוצר בפאנל מקבל סיסמה ראשונית. בכניסה הראשונה המערכת חוסמת את הגישה עד שבוחרים סיסמה אישית, שונה מהסיסמה הראשונית.
 
 ## טכנולוגיות
 
@@ -69,21 +74,28 @@ clients ──< projects ──< test_requests ──< tests
    supabase db push --include-seed   # מבנה הטבלאות + נתוני דוגמה
    ```
 2. מעתיקים את `web/js/config.example.js` ל-`web/js/config.js` וממלאים את כתובת הפרויקט ואת ה-anon key.
-3. נרשמים דרך מסך ההרשמה, ומקדמים את המשתמש לתפקיד `staff` בעזרת השאילתה שלמעלה.
-4. מריצים שרת מקומי ופותחים את הדפדפן:
+3. פורסים את פונקציית הניהול: `supabase functions deploy admin-users`
+4. יוצרים מנהל ראשון (Dashboard ← Authentication ← Add user), ואז:
+   ```sql
+   update profiles set role = 'admin' where id = (select id from auth.users where email = 'you@company.com');
+   ```
+   משם ממשיכים לנהל את המשתמשים מפאנל הניהול.
+5. מריצים שרת מקומי ופותחים את הדפדפן:
    ```bash
    npx http-server web -p 5173
    ```
-   → http://localhost:5173
+   → http://localhost:5173 (מערכת) · http://localhost:5173/admin.html (פאנל ניהול)
 
 ## מבנה התיקיות
 
 ```
 supabase/
-  migrations/   מבנה הטבלאות, טריגרים, RLS ו-Storage
+  migrations/   מבנה הטבלאות, טריגרים, תפקידים, RLS ו-Storage
+  functions/    admin-users – ניהול משתמשים (Edge Function)
   seed.sql      נתוני דוגמה סינתטיים
 web/
-  index.html    מעטפת האפליקציה ומסך הכניסה
+  index.html    המערכת: כניסה, הרשמה ועמודים לפי תפקיד
+  admin.html    פאנל ניהול למנהל מערכת
   css/          עיצוב
   js/           לוגיקה, טפסים ועמודים
   img/          לוגו – פרח נורית
@@ -93,4 +105,4 @@ web/
 
 ---
 
-**English summary:** A lightweight CRM for a lab-services business: clients, projects, test requests, tests, file uploads (drawings, images, COA) and reports that update in real time. Includes email/password login and a two-step customer sign-up; customers get read-only access to their own company's data, enforced by Row Level Security. Built with plain HTML, CSS and JavaScript on top of Supabase (Postgres, RLS, Realtime, Storage).
+**English summary:** A lightweight CRM for a lab-services business: clients, projects, test requests, tests, file uploads (drawings, images, COA) and reports that update in real time. Four roles enforced with Row Level Security (admin, lab manager, technician, client), a separate admin panel with its own login, dashboard and user management (via an Edge Function), a two-step customer sign-up, and initial passwords that must be changed on first login. Built with plain HTML, CSS and JavaScript on top of Supabase (Postgres, RLS, Realtime, Storage).

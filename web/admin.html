@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buttercup · פאנל ניהול</title>
+  <link rel="icon" href="img/buttercup.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-app">
+
+  <!-- Admin login -->
+  <div id="login-view" class="login" hidden>
+    <div class="login-card">
+      <div class="lockup">
+        <img src="img/buttercup.svg" alt="" class="logo logo-xl">
+        <div class="lockup-name">Buttercup</div>
+        <div class="lockup-en">ADMIN PANEL</div>
+        <div class="lockup-sub">כניסת מנהל מערכת</div>
+      </div>
+      <form id="login-form" class="auth-form" novalidate>
+        <label>מייל<input name="email" type="email" dir="ltr" autocomplete="username" required></label>
+        <label>סיסמה<input name="password" type="password" dir="ltr" autocomplete="current-password" required></label>
+        <div class="error" hidden></div>
+        <button class="btn primary block" type="submit">כניסה לפאנל הניהול</button>
+        <p class="switch"><a href="index.html">→ חזרה לכניסה הרגילה</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin app -->
+  <div id="app-view" class="shell" hidden>
+    <aside class="sidebar">
+      <a href="#/overview" class="brand">
+        <img src="img/buttercup.svg" alt="" class="logo">
+        <span>
+          <span class="brand-name">Buttercup</span>
+          <span class="brand-sub">פאנל ניהול</span>
+        </span>
+      </a>
+      <nav class="nav">
+        <a href="#/overview" data-page="overview">לוח בקרה</a>
+        <a href="#/users" data-page="users">משתמשים והרשאות</a>
+        <a href="#/data" data-page="data">ניהול נתונים</a>
+        <a href="index.html" class="nav-admin">למערכת ה-CRM ↗</a>
+      </nav>
+      <div class="user">
+        <span class="role-tag">מנהל מערכת</span>
+        <span id="user-email" dir="ltr"></span>
+        <button class="btn ghost small" id="logout">יציאה</button>
+      </div>
+    </aside>
+    <main class="content" id="main"></main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

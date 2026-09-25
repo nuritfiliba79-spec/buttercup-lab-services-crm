@@ -95,22 +95,27 @@ function requestModal(request, projectId, onSaved) {
   })
 }
 
+// Technicians may only change these columns (also enforced by a DB trigger).
+const TECH_TEST_FIELDS = ['status', 'performed_by', 'result_notes']
+
 function testModal(test, requestId, labs, onSaved) {
+  const locked = !isStaff() ? 'disabled' : ''
   openModal({
-    title: test ? 'עריכת בדיקה' : 'בדיקה חדשה',
+    title: test ? (isStaff() ? 'עריכת בדיקה' : `עדכון תוצאה · ${test.test_type}`) : 'בדיקה חדשה',
     body: `
-      <label>סוג בדיקה *<input name="test_type" required value="${esc(test?.test_type)}"></label>
+      <label>סוג בדיקה *<input name="test_type" required value="${esc(test?.test_type)}" ${locked}></label>
       <div class="row">
-        <label>מעבדה מבצעת<select name="lab_id">${options(labs.map((l) => [l.id, l.name]), test?.lab_id, 'לא נקבע')}</select></label>
+        <label>מעבדה מבצעת<select name="lab_id" ${locked}>${options(labs.map((l) => [l.id, l.name]), test?.lab_id, 'לא נקבע')}</select></label>
         <label>מי ביצע<input name="performed_by" value="${esc(test?.performed_by)}"></label>
       </div>
       <div class="row">
-        <label>יעד<input name="due_date" type="date" value="${esc(test?.due_date)}"></label>
+        <label>יעד<input name="due_date" type="date" value="${esc(test?.due_date)}" ${locked}></label>
         <label>סטטוס<select name="status">${options(Object.entries(TEST_STATUS), test?.status ?? 'pending')}</select></label>
       </div>
-      <label>תוצאה / הערות<textarea name="result_notes" rows="2">${esc(test?.result_notes)}</textarea></label>`,
+      <label>תוצאה / הערות<textarea name="result_notes" rows="3">${esc(test?.result_notes)}</textarea></label>`,
     onSubmit: async (form) => {
-      const row = formValues(form)
+      let row = formValues(form)
+      if (!isStaff()) row = Object.fromEntries(TECH_TEST_FIELDS.map((k) => [k, row[k] ?? null]))
       check(await (test
         ? db.from('tests').update(row).eq('id', test.id)
         : db.from('tests').insert({ ...row, test_request_id: requestId })))

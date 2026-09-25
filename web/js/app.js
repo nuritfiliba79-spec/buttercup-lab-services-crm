@@ -40,8 +40,8 @@ const appView = document.getElementById('app-view')
 const loginCard = loginView.querySelector('.login-card')
 
 async function showView() {
-  document.body.classList.remove('role-staff', 'role-client')
   Profile = null
+  applyRoleClasses()
   cleanup?.()
   cleanup = null
   main.replaceChildren()
@@ -55,7 +55,7 @@ async function showView() {
   }
 
   const { data, error } = await db.from('profiles')
-    .select('role, client_id, must_change_password').eq('id', session.user.id).maybeSingle()
+    .select('role, client_id, lab_id, must_change_password').eq('id', session.user.id).maybeSingle()
   // No profile row means the account isn't set up; treat it as a customer with no data.
   Profile = data ?? { role: 'client', client_id: null }
   if (error) toast(errorMessage(error))
@@ -75,9 +75,9 @@ async function showView() {
   loginCard.classList.remove('forced')
   loginView.hidden = true
   appView.hidden = false
-  document.body.classList.add(`role-${Profile.role}`)
+  applyRoleClasses()
   document.getElementById('user-email').textContent = session.user.email
-  document.getElementById('user-role').textContent = isStaff() ? 'צוות המעבדה' : 'לקוח'
+  document.getElementById('user-role').textContent = ROLE_LABELS[Profile.role] ?? Profile.role
   route()
 }
 
