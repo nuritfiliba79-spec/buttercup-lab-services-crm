@@ -35,23 +35,46 @@ async function route() {
 
 // ---------- Session / role ----------
 
+const loginView = document.getElementById('login-view')
+const appView = document.getElementById('app-view')
+const loginCard = loginView.querySelector('.login-card')
+
 async function showView() {
-  document.getElementById('login-view').hidden = !!session
-  document.getElementById('app-view').hidden = !session
   document.body.classList.remove('role-staff', 'role-client')
   Profile = null
+  cleanup?.()
+  cleanup = null
+  main.replaceChildren()
 
   if (!session) {
-    cleanup?.()
-    cleanup = null
-    main.replaceChildren()
+    loginCard.classList.remove('forced')
+    loginView.hidden = false
+    appView.hidden = true
+    if (!document.querySelector('[data-panel="login"]:not([hidden]), [data-panel^="signup"]:not([hidden])')) showPanel('login')
     return
   }
 
-  const { data, error } = await db.from('profiles').select('role, client_id').eq('id', session.user.id).maybeSingle()
+  const { data, error } = await db.from('profiles')
+    .select('role, client_id, must_change_password').eq('id', session.user.id).maybeSingle()
   // No profile row means the account isn't set up; treat it as a customer with no data.
   Profile = data ?? { role: 'client', client_id: null }
   if (error) toast(errorMessage(error))
+
+  // Logged in with an initial password: block the app until a personal password is set.
+  if (Profile.must_change_password) {
+    loginCard.classList.add('forced')
+    loginView.hidden = false
+    appView.hidden = true
+    changeForm.email.value = session.user.email
+    changeForm.password.value = ''
+    changeForm.confirm.value = ''
+    showPanel('change-password')
+    return
+  }
+
+  loginCard.classList.remove('forced')
+  loginView.hidden = true
+  appView.hidden = false
   document.body.classList.add(`role-${Profile.role}`)
   document.getElementById('user-email').textContent = session.user.email
   document.getElementById('user-role').textContent = isStaff() ? 'צוות המעבדה' : 'לקוח'
@@ -163,16 +186,25 @@ detailsForm.addEventListener('submit', (e) => {
 
 document.getElementById('signup-back').addEventListener('click', () => showPanel('signup'))
 
+// Shared rules for a new password; returns an error message or null.
+function passwordProblem(form) {
+  const problem = validate(form)
+  if (problem) return problem
+  const password = form.password.value
+  if (password.length < 8) return 'הסיסמה צריכה להכיל לפחות 8 תווים'
+  if (!/[a-zA-Z֐-׿]/.test(password) || !/\d/.test(password)) {
+    return 'הסיסמה צריכה לכלול לפחות אות אחת ומספר אחד'
+  }
+  if (password !== form.confirm.value) return 'הסיסמאות אינן תואמות'
+  return null
+}
+
 // Sign-up step 2: create a password for the email from step 1
 passwordForm.addEventListener('submit', (e) => {
   e.preventDefault()
-  const problem = validate(passwordForm)
+  const problem = passwordProblem(passwordForm)
   if (problem) return showError(passwordForm, problem)
   const password = passwordForm.password.value
-  if (!/[a-zA-Z֐-׿]/.test(password) || !/\d/.test(password)) {
-    return showError(passwordForm, 'הסיסמה צריכה לכלול לפחות אות אחת ומספר אחד')
-  }
-  if (password !== passwordForm.confirm.value) return showError(passwordForm, 'הסיסמאות אינן תואמות')
 
   const { email, company_name, contact_person, phone } = signupDetails
   withBusy(passwordForm, async () => {
@@ -195,3 +227,25 @@ passwordForm.addEventListener('submit', (e) => {
     if (!data.session) showPanel('signup-done')
   })
 })
+
+// First login with an initial password: replace it with a personal one
+const changeForm = document.getElementById('change-password')
+
+changeForm.addEventListener('submit', (e) => {
+  e.preventDefault()
+  const problem = passwordProblem(changeForm)
+  if (problem) return showError(changeForm, problem)
+  withBusy(changeForm, async () => {
+    const { error } = await db.auth.updateUser({ password: changeForm.password.value })
+    if (error) {
+      const sameAsOld = error.code === 'same_password' || /different from the old/i.test(error.message)
+      return showError(changeForm, sameAsOld ? 'הסיסמה החדשה חייבת להיות שונה מהסיסמה הראשונית' : authMessage(error))
+    }
+    const { error: rpcError } = await db.rpc('password_changed')
+    if (rpcError) return showError(changeForm, errorMessage(rpcError))
+    toast('הסיסמה עודכנה')
+    showView()
+  })
+})
+
+document.getElementById('change-password-cancel').addEventListener('click', () => db.auth.signOut())

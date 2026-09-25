@@ -63,6 +63,22 @@
         </div>
       </form>
 
+      <!-- First login with an initial password: choose a personal one -->
+      <form id="change-password" class="auth-form" data-panel="change-password" hidden novalidate>
+        <div class="notice">
+          <b>ברוכים הבאים!</b> נכנסתם עם סיסמה ראשונית. כדי להמשיך, בחרו סיסמה אישית חדשה.
+        </div>
+        <label>מייל<input name="email" type="email" dir="ltr" readonly tabindex="-1" class="readonly"></label>
+        <label>סיסמה חדשה *<input name="password" type="password" dir="ltr" autocomplete="new-password" required minlength="8"></label>
+        <label>אימות סיסמה *<input name="confirm" type="password" dir="ltr" autocomplete="new-password" required minlength="8"></label>
+        <p class="hint">לפחות 8 תווים, כולל אות ומספר, ושונה מהסיסמה הראשונית.</p>
+        <div class="error" hidden></div>
+        <div class="row-buttons">
+          <button type="button" class="btn ghost" id="change-password-cancel">יציאה</button>
+          <button class="btn primary" type="submit">שמירת סיסמה והמשך</button>
+        </div>
+      </form>
+
       <div id="signup-done" class="auth-form" data-panel="signup-done" hidden>
         <div class="success">החשבון נוצר. שלחנו מייל לאימות הכתובת. אחרי האימות אפשר להיכנס.</div>
         <button type="button" class="btn primary block" data-tab="login">לכניסה</button>

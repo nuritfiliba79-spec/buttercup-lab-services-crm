@@ -235,6 +235,8 @@ label.check input { width: auto; }
 .steps li.done::before { content: '✓'; border-color: var(--sage); background: var(--sage); color: #fff; }
 
 .success { background: var(--st-done-bg); color: var(--st-done); border-radius: 8px; padding: 12px 14px; }
+.notice { background: var(--primary-soft); color: var(--ink-2); border-radius: 8px; padding: 12px 14px; font-size: .92rem; }
+.login-card.forced .tabs { display: none; }
 
 .toast { position: fixed; bottom: 20px; inset-inline-start: 50%; transform: translateX(50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 60; font-size: .9rem; box-shadow: var(--shadow); }
 
