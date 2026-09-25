@@ -57,7 +57,7 @@ async function showView() {
   const { data, error } = await db.from('profiles')
     .select('role, client_id, lab_id, must_change_password').eq('id', session.user.id).maybeSingle()
   // No profile row means the account isn't set up; treat it as a customer with no data.
-  Profile = data ?? { role: 'client', client_id: null }
+  Profile = { ...(data ?? { role: 'client', client_id: null }), id: session.user.id }
   if (error) toast(errorMessage(error))
 
   // Logged in with an initial password: block the app until a personal password is set.

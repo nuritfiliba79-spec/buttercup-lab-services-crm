@@ -268,3 +268,9 @@ label.check input { width: auto; }
   cursor: pointer; padding: 4px 6px; border-radius: 6px;
 }
 .pw-toggle:hover { background: var(--primary-soft); }
+
+/* Files grouped by storage area */
+.files-area { font-size: .95rem; margin: 18px 0 8px; color: var(--ink-2); }
+.files-area:first-of-type { margin-top: 4px; }
+.upload .upload-hint { grid-column: 1 / -1; margin: 0; }
+td.nowrap { white-space: nowrap; }

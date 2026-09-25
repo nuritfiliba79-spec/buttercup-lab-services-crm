@@ -45,28 +45,60 @@ Pages.project = async (el, id) => {
       </section>
 
       <section class="card">
-        <div class="section-head"><h2>קבצים · שרטוטים, תמונות ו-COA</h2></div>
-        <form class="upload upload-only" id="upload">
-          <label>קובץ<input type="file" name="file" required></label>
-          <label>סוג<select name="file_type">${options(Object.entries(FILE_TYPE), 'drawing')}</select></label>
-          <label>שיוך להזמנה<select name="test_request_id">
-            ${options(p.test_requests.map((r) => [r.id, r.request_number]), '', 'כל הפרויקט')}</select></label>
-          <button class="btn primary" type="submit">העלאה</button>
-        </form>
-        ${files.length === 0 ? '<p class="empty">לא הועלו קבצים</p>' : `
-        <div class="table-wrap"><table>
-          <thead><tr><th>סוג</th><th>שם הקובץ</th><th>הזמנה</th><th>גודל</th><th>הועלה</th><th></th></tr></thead>
-          <tbody>${files.map((f) => `<tr>
-            <td><span class="badge badge-file">${esc(FILE_TYPE[f.file_type])}</span></td>
-            <td class="ltr">${esc(f.file_name)}</td>
-            <td class="mono">${val(p.test_requests.find((r) => r.id === f.test_request_id)?.request_number)}</td>
-            <td>${fmtSize(f.size_bytes)}</td>
-            <td class="muted">${fmtDate(f.created_at)}</td>
-            <td><button class="btn link" data-action="download" data-id="${f.id}">פתיחה</button>
-                <button class="btn link admin-only" data-action="delete-file" data-id="${f.id}">מחיקה</button></td>
-          </tr>`).join('')}</tbody>
-        </table></div>`}
+        <div class="section-head"><h2>קבצים</h2></div>
+        ${renderUpload(p)}
+        ${files.length === 0 ? '<p class="empty">לא הועלו קבצים</p>' : Object.entries(STORAGE_AREAS).map(([bucket, label]) => {
+          const inArea = files.filter((f) => (f.bucket ?? 'lab-files') === bucket)
+          if (!inArea.length) return ''
+          return `<h3 class="files-area">${esc(label)} <span class="muted">(${inArea.length})</span></h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>סוג</th><th>שם הקובץ</th><th>שיוך</th><th>גודל</th><th>הועלה</th><th></th></tr></thead>
+            <tbody>${inArea.map((f) => `<tr>
+              <td><span class="badge badge-file">${esc(FILE_TYPE[f.file_type] ?? f.file_type)}</span></td>
+              <td class="ltr">${esc(f.file_name)}</td>
+              <td>${linkLabel(f)}</td>
+              <td>${fmtSize(f.size_bytes)}</td>
+              <td class="muted">${fmtDate(f.created_at)}${f.uploaded_by === Profile.id ? ' · שלך' : ''}</td>
+              <td class="nowrap"><button class="btn link" data-action="download" data-id="${f.id}">פתיחה</button>
+                ${isAdmin() || f.uploaded_by === Profile.id
+                  ? `<button class="btn link" data-action="delete-file" data-id="${f.id}">מחיקה</button>` : ''}</td>
+            </tr>`).join('')}</tbody>
+          </table></div>`
+        }).join('')}
       </section>`
+  }
+
+  function renderUpload(p) {
+    const choices = uploadChoices()
+    if (!choices.length) return ''
+    const allTests = p.test_requests.flatMap((r) => r.tests.map((t) => ({ ...t, request_number: r.request_number })))
+    // Technicians attach files to their own lab's tests; others may pick any request or test.
+    const tests = isTech() ? allTests.filter((t) => t.lab_id === Profile.lab_id) : allTests
+    const hint = {
+      client: 'הקבצים יישמרו ב"קבצי הלקוח" ויהיו זמינים לצוות המעבדה.',
+      technician: 'הקבצים יישמרו ב"נתוני בדיקות וניסויים". הם פנימיים למעבדה ולא מוצגים ללקוח.',
+    }[Profile.role] ?? 'דוחות נשמרים ב"דוחות מעבדה", נתוני בדיקה וקבצי ניסוי נשמרים ב"נתוני בדיקות וניסויים", ושאר הקבצים ב"קבצי פרויקט".'
+    return `<form class="upload" id="upload">
+      <label>קובץ<input type="file" name="file" required></label>
+      <label>סוג<select name="kind">${options(choices, choices[0][0])}</select></label>
+      <label>שיוך<select name="link">
+        <option value="">כל הפרויקט</option>
+        ${p.test_requests.length ? `<optgroup label="הזמנות">${p.test_requests.map((r) =>
+          `<option value="request:${r.id}">${esc(r.request_number)}</option>`).join('')}</optgroup>` : ''}
+        ${tests.length ? `<optgroup label="בדיקות">${tests.map((t) =>
+          `<option value="test:${t.id}">${esc(t.request_number)} · ${esc(t.test_type)}</option>`).join('')}</optgroup>` : ''}
+      </select></label>
+      <button class="btn primary" type="submit">העלאה</button>
+      <p class="hint upload-hint">${esc(hint)}</p>
+    </form>`
+  }
+
+  function linkLabel(f) {
+    const test = project.test_requests.flatMap((r) => r.tests.map((t) => ({ ...t, request_number: r.request_number })))
+      .find((t) => t.id === f.test_id)
+    if (test) return `<span class="mono">${esc(test.request_number)}</span> · ${esc(test.test_type)}`
+    const req = project.test_requests.find((r) => r.id === f.test_request_id)
+    return req ? `<span class="mono">${esc(req.request_number)}</span>` : '<span class="muted">כל הפרויקט</span>'
   }
 
   function renderRequest(r) {
@@ -122,7 +154,7 @@ Pages.project = async (el, id) => {
       case 'download': {
         const f = files.find((x) => x.id === tid)
         const win = window.open('', '_blank') // open synchronously so the popup isn't blocked
-        const { data, error } = await db.storage.from(BUCKET).createSignedUrl(f.storage_path, 120)
+        const { data, error } = await db.storage.from(f.bucket ?? 'lab-files').createSignedUrl(f.storage_path, 120)
         if (error) {
           win?.close()
           toast(error.message === 'Object not found' ? 'הקובץ לא נמצא באחסון' : errorMessage(error))
@@ -132,7 +164,7 @@ Pages.project = async (el, id) => {
       case 'delete-file':
         twoStep(btn, async () => {
           const f = files.find((x) => x.id === tid)
-          await db.storage.from(BUCKET).remove([f.storage_path])
+          await removeStoredFiles([f])
           const { error } = await db.from('attachments').delete().eq('id', f.id)
           toast(error ? errorMessage(error) : 'הקובץ נמחק')
           reload()
@@ -159,21 +191,28 @@ Pages.project = async (el, id) => {
     button.disabled = true
     button.textContent = 'מעלה…'
     try {
+      const [bucket, fileType] = form.kind.value.split(':')
+      const [linkKind, linkId] = form.link.value.split(':')
+      const test = linkKind === 'test'
+        ? project.test_requests.flatMap((r) => r.tests).find((t) => t.id === linkId) : null
       // Storage keys must be ASCII, so the original (possibly Hebrew) name is kept in the table only.
       const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : ''
       const path = `projects/${id}/${crypto.randomUUID()}${/^[a-z0-9]{1,8}$/.test(ext) ? `.${ext}` : ''}`
-      check(await db.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream' }))
+      check(await db.storage.from(bucket).upload(path, file, { contentType: file.type || 'application/octet-stream' }))
       const { error } = await db.from('attachments').insert({
-        file_type: form.file_type.value,
+        bucket,
+        file_type: fileType,
         storage_path: path,
         file_name: file.name,
         mime_type: file.type || null,
         size_bytes: file.size,
         project_id: id,
-        test_request_id: form.test_request_id.value || null,
+        test_request_id: linkKind === 'request' ? linkId : test?.test_request_id ?? null,
+        test_id: test?.id ?? null,
+        uploaded_by: Profile.id,
       })
       if (error) {
-        await db.storage.from(BUCKET).remove([path])
+        await db.storage.from(bucket).remove([path])
         throw error
       }
       toast('הקובץ הועלה')

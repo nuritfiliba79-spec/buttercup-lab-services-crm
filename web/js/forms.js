@@ -61,8 +61,7 @@ async function projectModal(project, onSaved, defaultClientId) {
     },
     onDelete: project && (async () => {
       // Remove stored files first; the DB rows cascade with the project.
-      const files = check(await db.from('attachments').select('storage_path').eq('project_id', project.id))
-      if (files.length) await db.storage.from(BUCKET).remove(files.map((f) => f.storage_path))
+      await removeStoredFiles(check(await db.from('attachments').select('bucket, storage_path').eq('project_id', project.id)))
       check(await db.from('projects').delete().eq('id', project.id))
       toast('הפרויקט נמחק')
       onSaved('deleted')
@@ -86,8 +85,7 @@ function requestModal(request, projectId, onSaved) {
       onSaved()
     },
     onDelete: request && (async () => {
-      const files = check(await db.from('attachments').select('storage_path').eq('test_request_id', request.id))
-      if (files.length) await db.storage.from(BUCKET).remove(files.map((f) => f.storage_path))
+      await removeStoredFiles(check(await db.from('attachments').select('bucket, storage_path').eq('test_request_id', request.id)))
       check(await db.from('test_requests').delete().eq('id', request.id))
       toast('ההזמנה נמחקה')
       onSaved()

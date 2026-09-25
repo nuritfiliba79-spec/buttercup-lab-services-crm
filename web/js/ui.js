@@ -1,7 +1,6 @@
 // Shared helpers: Supabase client, labels, formatting, modal, toast.
 
 const db = supabase.createClient(CRM_CONFIG.SUPABASE_URL, CRM_CONFIG.SUPABASE_ANON_KEY)
-const BUCKET = 'lab-files'
 
 // Page renderers register here: Pages[name] = async (el, id) => cleanupFn | undefined
 const Pages = {}
@@ -24,12 +23,46 @@ function applyRoleClasses() {
   cls.add(`role-${Profile.role}`)
   if (isStaff()) cls.add('can-manage')
   if (isAdmin()) cls.add('can-delete')
-  if (isStaff() || isTech()) cls.add('can-upload')
+  if (isStaff() || isTech() || Profile.role === 'client') cls.add('can-upload')
 }
 
 const TEST_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם', failed: 'נכשל', cancelled: 'בוטל' }
 const REPORT_STATUS = { pending: 'ממתין', in_progress: 'בביצוע', completed: 'הושלם' }
-const FILE_TYPE = { drawing: 'שרטוט', image: 'תמונה', coa: 'COA', other: 'אחר' }
+const FILE_TYPE = {
+  drawing: 'שרטוט', image: 'תמונה', coa: 'COA', report: 'דוח',
+  test_data: 'נתוני בדיקה', experiment: 'קובץ ניסוי', other: 'אחר',
+}
+
+// Storage areas (Supabase buckets), in display order.
+const STORAGE_AREAS = {
+  'client-uploads': 'קבצי הלקוח',
+  'lab-reports': 'דוחות מעבדה',
+  'test-data': 'נתוני בדיקות וניסויים',
+  'lab-files': 'קבצי פרויקט',
+}
+
+// What the current user may upload: [value "bucket:type", label]. Mirrors the storage RLS policies.
+function uploadChoices() {
+  const pick = (bucket, types) => types.map((t) => [`${bucket}:${t}`, FILE_TYPE[t]])
+  if (Profile?.role === 'client') return pick('client-uploads', ['drawing', 'image', 'coa', 'other'])
+  if (isTech()) return pick('test-data', ['test_data', 'experiment', 'image', 'other'])
+  if (isStaff()) {
+    const area = (bucket, types) => pick(bucket, types).map(([v, l]) => [v, `${l} · ${STORAGE_AREAS[bucket]}`])
+    return [
+      ...area('lab-reports', ['report']),
+      ...area('test-data', ['test_data', 'experiment']),
+      ...area('lab-files', ['drawing', 'image', 'coa', 'other']),
+    ]
+  }
+  return []
+}
+
+// Deletes the stored objects for a list of attachment rows ({ bucket, storage_path }).
+async function removeStoredFiles(rows) {
+  const byBucket = {}
+  for (const r of rows) (byBucket[r.bucket ?? 'lab-files'] ??= []).push(r.storage_path)
+  await Promise.all(Object.entries(byBucket).map(([b, paths]) => db.storage.from(b).remove(paths)))
+}
 
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, (c) =>
@@ -82,6 +115,10 @@ function check({ data, error }) {
 function errorMessage(err) {
   if (err?.code === '23503') return 'לא ניתן למחוק: קיימות רשומות שמקושרות לפריט הזה.'
   if (err?.code === '23505') return 'ערך זה כבר קיים במערכת.'
+  const msg = err?.message ?? ''
+  if (/mime type/i.test(msg)) return 'סוג הקובץ הזה לא נתמך באזור האחסון שנבחר.'
+  if (/maximum allowed size|too large/i.test(msg)) return 'הקובץ גדול מדי.'
+  if (/row-level security|violates row-level/i.test(msg)) return 'אין לך הרשאה לפעולה הזו.'
   return err?.message ?? String(err)
 }
 

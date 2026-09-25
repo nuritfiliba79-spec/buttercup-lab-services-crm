@@ -296,8 +296,8 @@ const DATA_TABLES = {
   reports: { label: 'דוחות', select: 'id, status, completed_tests, total_tests, message, notes, created_at, test_request:test_requests(request_number)',
     cols: [['test_request.request_number', 'הזמנה'], ['status', 'סטטוס', (v) => badge(v, REPORT_STATUS)],
       ['completed_tests', 'הושלמו'], ['total_tests', 'סה"כ'], ['message', 'הודעה'], ['notes', 'הערות']] },
-  attachments: { label: 'קבצים', select: 'id, file_type, file_name, size_bytes, storage_path, created_at, project:projects(name)',
-    cols: [['file_type', 'סוג', (v) => esc(FILE_TYPE[v] ?? v)], ['file_name', 'שם הקובץ'], ['project.name', 'פרויקט'], ['size_bytes', 'גודל', fmtSize], ['created_at', 'הועלה', fmtDate]] },
+  attachments: { label: 'קבצים', select: 'id, bucket, file_type, file_name, size_bytes, storage_path, created_at, project:projects(name)',
+    cols: [['bucket', 'אזור אחסון', (v) => esc(STORAGE_AREAS[v] ?? v)], ['file_type', 'סוג', (v) => esc(FILE_TYPE[v] ?? v)], ['file_name', 'שם הקובץ'], ['project.name', 'פרויקט'], ['size_bytes', 'גודל', fmtSize], ['created_at', 'הועלה', fmtDate]] },
   labs: { label: 'מעבדות', select: 'id, name, contact, phone, email, created_at',
     cols: [['name', 'שם'], ['contact', 'איש קשר'], ['phone', 'טלפון'], ['email', 'מייל']] },
 }
@@ -353,7 +353,7 @@ Pages.data = async (el, tableName) => {
     if (!btn) return
     twoStep(btn, async () => {
       const row = rows.find((r) => r.id === btn.dataset.delete)
-      if (table === 'attachments') await db.storage.from(BUCKET).remove([row.storage_path])
+      if (table === 'attachments') await removeStoredFiles([row])
       const { data, error } = await db.from(table).delete().eq('id', row.id).select('id')
       if (error) return toast(errorMessage(error))
       toast(data.length ? 'הרשומה נמחקה' : 'המחיקה נחסמה (אין הרשאה)')
