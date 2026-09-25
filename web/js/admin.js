@@ -439,7 +439,7 @@ loginForm.addEventListener('submit', async (e) => {
     return
   }
   button.disabled = true
-  const { error } = await db.auth.signInWithPassword({ email: loginForm.email.value.trim(), password: loginForm.password.value })
+  const { error } = await signIn(loginForm.email.value, loginForm.password.value)
   button.disabled = false
   if (error) {
     errEl.textContent = error.message === 'Invalid login credentials' ? 'מייל או סיסמה שגויים' : error.message

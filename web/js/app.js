@@ -159,10 +159,7 @@ loginForm.addEventListener('submit', (e) => {
   const problem = validate(loginForm)
   if (problem) return showError(loginForm, problem)
   withBusy(loginForm, async () => {
-    const { error } = await db.auth.signInWithPassword({
-      email: loginForm.email.value.trim(),
-      password: loginForm.password.value,
-    })
+    const { error } = await signIn(loginForm.email.value, loginForm.password.value)
     if (error) showError(loginForm, authMessage(error))
   })
 })

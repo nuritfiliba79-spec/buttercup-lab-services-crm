@@ -179,6 +179,39 @@ function openModal({ title, body, submitLabel = 'שמירה', onSubmit, onDelete
   return root
 }
 
+// Signs in; if that fails and the password has stray spaces (common when copy-pasting), retries trimmed.
+async function signIn(email, password) {
+  const cleanEmail = email.trim().toLowerCase()
+  let res = await db.auth.signInWithPassword({ email: cleanEmail, password })
+  if (res.error && password !== password.trim()) {
+    res = await db.auth.signInWithPassword({ email: cleanEmail, password: password.trim() })
+  }
+  return res
+}
+
+// Adds a show/hide button to every password field, so people can check what they typed.
+function addPasswordToggles(root = document) {
+  root.querySelectorAll('input[type="password"]:not([data-toggle])').forEach((input) => {
+    input.dataset.toggle = '1'
+    const wrap = document.createElement('span')
+    wrap.className = 'pw-wrap'
+    input.replaceWith(wrap)
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'pw-toggle'
+    button.textContent = 'הצגה'
+    button.setAttribute('aria-label', 'הצגת הסיסמה')
+    button.onclick = () => {
+      const show = input.type === 'password'
+      input.type = show ? 'text' : 'password'
+      button.textContent = show ? 'הסתרה' : 'הצגה'
+      button.setAttribute('aria-label', show ? 'הסתרת הסיסמה' : 'הצגת הסיסמה')
+    }
+    wrap.append(input, button)
+  })
+}
+addPasswordToggles()
+
 // Subscribes to changes on the given tables and calls `onChange` (debounced). Returns an unsubscribe fn.
 function watchTables(name, tables, onChange, onStatus) {
   let timer

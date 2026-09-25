@@ -258,3 +258,13 @@ label.check input { width: auto; }
 }
 
 .nav a.nav-admin { margin-top: 10px; color: var(--primary); font-size: .9rem; }
+
+/* Password field with show/hide toggle (input is LTR, so the toggle sits on the right, away from the text start) */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { padding-right: 64px; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--primary); font: inherit; font-size: .8rem; font-weight: 600;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+}
+.pw-toggle:hover { background: var(--primary-soft); }
